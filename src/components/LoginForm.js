@@ -38,7 +38,18 @@ export default function LoginForm() {
           </label>
           <p className="err-msg" aria-live="polite">{err}</p>
           <button className="btn btn-primary" type="submit" style={{ width: "100%" }}>Log in</button>
-          <p className="hint">Demo account: <span className="mono">testaccount</span> / <span className="mono">test12345</span></p>
+          <div className="hint" style={{ display: "grid", gap: 12 }}>
+            <div>
+              <b>Demo Buyer:</b><br />
+              Username: <span className="mono">buyerAccount</span><br />
+              Password: <span className="mono">buyer1234</span>
+            </div>
+            <div>
+              <b>Demo Seller:</b><br />
+              Username: <span className="mono">sellerAccount</span><br />
+              Password: <span className="mono">seller1234</span>
+            </div>
+          </div>
         </form>
       </div>
     </section>

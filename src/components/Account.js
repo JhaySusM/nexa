@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AUTO_H, BLABEL, BPILL, BSTEP, GAMES, gameById, net, pkr } from "@/lib/data";
 import { useNexa } from "./NexaProvider";
 import GameMark from "./GameMark";
+import Timeline, { STAGE_FOR_STATUS } from "./Timeline";
 
 const CLOSED = ["Completed", "Cancelled", "Rejected", "Refunded"];
 
@@ -75,6 +76,7 @@ function nextFor(d, side, act) {
 }
 
 function DealCard({ d, side, act }) {
+  const [showTrack, setShowTrack] = useState(false);
   const g = gameById(d.game);
   const n = nextFor(d, side, act);
   const open = ["In escrow", "Sent"].includes(d.st);
@@ -95,6 +97,15 @@ function DealCard({ d, side, act }) {
       <Progress st={d.st} />
       <p className="next">{n.txt}</p>
       {n.act}
+      <button type="button" className="btn btn-ghost btn-sm" style={{ justifySelf: "start" }} aria-expanded={showTrack} onClick={() => setShowTrack((v) => !v)}>
+        {showTrack ? "Hide tracking" : "Track deal"}
+      </button>
+      {showTrack && (
+        <div>
+          <Timeline stage={STAGE_FOR_STATUS[d.st] ?? 2} />
+          {["Disputed", "Rejected", "Cancelled", "Refunded"].includes(d.st) && <p className="hint">Status: {d.st}. {n.txt}</p>}
+        </div>
+      )}
       {open && (
         <button className="btn btn-ghost btn-sm" style={{ justifySelf: "start" }} onClick={() => act("dispute", d)}>
           Report a problem
@@ -105,7 +116,7 @@ function DealCard({ d, side, act }) {
 }
 
 export default function Account() {
-  const { acct, side, setSide, listings, setModal, setDeal, toast, addTicket, addPlayerId, withdraw, featureListing, user, authReady, logout } = useNexa();
+  const { acct, side, setSide, listings, setModal, setDeal, toast, addTicket, addPlayerId, withdraw, featureListing, user, authReady } = useNexa();
   const router = useRouter();
   const [idGame, setIdGame] = useState(GAMES[0].id);
   const [idVal, setIdVal] = useState("");
@@ -114,11 +125,6 @@ export default function Account() {
   useEffect(() => {
     if (authReady && !user) router.replace("/login");
   }, [authReady, user, router]);
-
-  const onLogout = () => {
-    logout();
-    router.push("/");
-  };
 
   if (!user) return <section><div className="wrap"><p className="muted">Loading…</p></div></section>;
 
@@ -130,7 +136,7 @@ export default function Account() {
   const needAction = B
     ? list.filter((d) => ["Awaiting you", "Confirmed", "Sent"].includes(d.st)).length
     : list.filter((d) => ["Awaiting you", "In escrow"].includes(d.st)).length;
-  const mine = listings.filter((l) => l.mine || l.seller === "KI‑40221");
+  const mine = listings.filter((l) => l.owner === user.username);
 
   const confirm = (title, text, onOk, needReason = false) => setModal({ kind: "confirm", title, text, needReason, onOk });
 
@@ -216,12 +222,9 @@ export default function Account() {
               Player ID <span className="mono">{B ? "KI‑58817" : "KI‑40221"}</span>. One account can buy and sell. Switch views to see each side.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onLogout}>Log out</button>
           <div className="seg" role="group" aria-label="Account view">
             <button type="button" aria-pressed={B} onClick={() => setSide("buyer")}>Buyer</button>
             <button type="button" aria-pressed={!B} onClick={() => setSide("seller")}>Seller</button>
-          </div>
           </div>
         </div>
 
@@ -339,6 +342,7 @@ export default function Account() {
                       </tbody>
                     </table>
                   </div>
+                  {!mine.length && <p className="muted">You haven’t posted any listings yet.</p>}
                   <p className="hint">Featuring puts a listing at the top of its game for 7 days, for ₹500.</p>
                 </div>
               </>

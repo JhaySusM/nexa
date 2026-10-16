@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { SAMPLE_DEAL_ID, TRACK_STAGES, pkr } from "@/lib/data";
+import { SAMPLE_DEAL_ID, pkr } from "@/lib/data";
 import { useNexa } from "./NexaProvider";
+import Timeline from "./Timeline";
 
 function pillFor(stage) {
   if (stage >= 6) return ["ok", "Released"];
@@ -73,18 +74,7 @@ export default function Track() {
             <p style={{ marginBottom: 16 }}>
               {d.l.title} · <span className="mono">{pkr(d.price)}</span>
             </p>
-            <ol className="timeline">
-              {TRACK_STAGES.map(([title, sub], i) => {
-                const n = i + 1;
-                const cls = n < d.stage ? "done" : n === d.stage ? "now" : "";
-                return (
-                  <li key={title} className={cls}>
-                    <span className="tick">{n < d.stage ? "✓" : n}</span>
-                    <div><b>{title}</b><span>{sub}</span></div>
-                  </li>
-                );
-              })}
-            </ol>
+            <Timeline stage={d.stage} />
             <div className="exceptions">
               Something wrong? <span className="pill bad">Disputed</span> freezes the money in escrow while support reviews.{" "}
               <span className="pill" style={{ background: "var(--sunk)", color: "var(--muted)" }}>Cancelled</span> after the response timeout.

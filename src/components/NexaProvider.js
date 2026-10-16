@@ -8,8 +8,12 @@ export const useNexa = () => useContext(Ctx);
 
 const TRACK_STAGE_FOR = { Confirmed: 3, "In escrow": 4, Sent: 4, Completed: 6 };
 // Demo-only credentials. Checked in the browser, so this is not real security.
-const DEMO_USER = { username: "testaccount", password: "test12345" };
+const DEMO_USERS = [
+  { username: "buyeraccount", password: "buyer1234", side: "buyer" },
+  { username: "selleraccount", password: "seller1234", side: "seller" },
+];
 const USER_KEY = "nexa-user";
+const STATE_KEY = "nexa-state-v3";
 const DEFAULT_FILTERS = { game: "all", type: "All", q: "", sort: "new" };
 
 export default function NexaProvider({ children }) {
@@ -30,16 +34,37 @@ export default function NexaProvider({ children }) {
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(USER_KEY) === DEMO_USER.username) setUser({ username: DEMO_USER.username });
+      const u = DEMO_USERS.find((x) => x.username === localStorage.getItem(USER_KEY));
+      if (u) {
+        setUser({ username: u.username });
+        setSide(u.side);
+      }
+      // Restore deals so a request made as the buyer is still there when the seller logs in.
+      const saved = JSON.parse(localStorage.getItem(STATE_KEY) || "null");
+      if (saved?.acct && saved?.deals) {
+        const uniq = (arr) => arr.filter((x, i) => arr.findIndex((y) => y.id === x.id) === i);
+        setAcct({ ...saved.acct, buy: uniq(saved.acct.buy), sell: uniq(saved.acct.sell) });
+        setDeals(saved.deals);
+        seq.current = saved.seq || seq.current;
+      }
     } catch {}
     setAuthReady(true);
   }, []);
 
-  const login = useCallback((username, password) => {
-    if (username.trim().toLowerCase() !== DEMO_USER.username || password !== DEMO_USER.password) return false;
-    setUser({ username: DEMO_USER.username });
+  useEffect(() => {
+    if (!authReady) return;
     try {
-      localStorage.setItem(USER_KEY, DEMO_USER.username);
+      localStorage.setItem(STATE_KEY, JSON.stringify({ acct, deals, seq: seq.current }));
+    } catch {}
+  }, [authReady, acct, deals]);
+
+  const login = useCallback((username, password) => {
+    const u = DEMO_USERS.find((x) => x.username === username.trim().toLowerCase() && x.password === password);
+    if (!u) return false;
+    setUser({ username: u.username });
+    setSide(u.side);
+    try {
+      localStorage.setItem(USER_KEY, u.username);
     } catch {}
     return true;
   }, []);
@@ -78,17 +103,21 @@ export default function NexaProvider({ children }) {
   const closeModal = useCallback(() => setModal(null), []);
 
   const createDeal = ({ listing, price, qty, pid, ch }) => {
-    const id = "NX-2026-" + String(seq.current++).padStart(5, "0");
+    const used = [...acct.buy, ...acct.sell].map((x) => +x.id.slice(8) || 0).concat(Object.keys(deals).map((k) => +k.slice(8) || 0));
+    seq.current = Math.max(seq.current, ...used) + 1;
+    const id = "NX-2026-" + String(seq.current).padStart(5, "0");
     setDeals((d) => ({ ...d, [id]: { l: listing, price, qty, pid, ch, stage: 2 } }));
     setAcct((a) => ({
       ...a,
       buy: [{ id, game: listing.g, item: listing.title, other: listing.seller, price, st: "Awaiting seller", ch }, ...a.buy],
+      // The seller sees the same deal as an incoming request they can accept.
+      sell: [{ id, game: listing.g, item: listing.title, other: pid, price, st: "Awaiting you", ch }, ...a.sell],
     }));
     return id;
   };
 
   const addListing = (l) => {
-    setListings((ls) => [...ls, { ...l, n: Math.max(...ls.map((x) => x.n)) + 1, v: false, mine: true }]);
+    setListings((ls) => [...ls, { ...l, n: Math.max(...ls.map((x) => x.n)) + 1, v: false, mine: true, owner: user?.username }]);
     setFilters(DEFAULT_FILTERS);
   };
 

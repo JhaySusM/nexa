@@ -35,7 +35,7 @@ function DealModal({ listing: l }) {
         <div className="kv"><span>Item</span><span>{l.title}</span></div>
         <div className="kv"><span>Agreed price × qty</span><span className="mono">{pkr(created.price)} × {created.qty}</span></div>
         <div className="kv"><span>Deliver to player ID</span><span className="mono">{created.pid}</span></div>
-        <p className="hint">Send this link to the seller in your {created.ch} chat. The deal is confirmed only when they accept the same terms.</p>
+        <p className="hint">Send this link to the seller in your chat. The deal is confirmed only when they accept the same terms.</p>
         <div className="linkbox">
           <code>{link}</code>
           <button className="btn btn-ghost btn-sm" type="button" onClick={() => copy(link)}>Copy</button>
@@ -68,12 +68,6 @@ function DealModal({ listing: l }) {
         </label>
         <label className="f full">Your in‑game player ID
           <input autoFocus value={f.pid} onChange={set("pid")} placeholder="The account that receives the item" required />
-        </label>
-        <label className="f full">Negotiated on
-          <select value={f.ch} onChange={set("ch")}>
-            <option>WhatsApp</option>
-            <option>Telegram</option>
-          </select>
         </label>
         <p className="hint full">
           Use the terms you already agreed in chat. After the seller accepts, you pay into NeXa escrow. The seller is paid only when you confirm you received the item.
